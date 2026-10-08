@@ -43,7 +43,15 @@ HORDE_NEG = ('lowres, worst quality, text, watermark, signature, photo, realisti
              'bright colors, cheerful, extra fingers, bad anatomy')
 PIXEL_STYLE = 'muted colors, dim lighting, limited palette'
 
-# Pixel-art faces drawn natively by a pixel-art model on AI Horde.
+# Pixel-art faces drawn natively on AI Horde. How the cached sources in
+# assets/ai_src/ were made (re-running regenerates them with these settings):
+#   vincent_base_px.png  AlbedoBase XL (SDXL) + Pixel Art XL LoRA (CivitAI 120096), 768x512, seed 32
+#   vincent_px.png       img2img from vincent_base_px (denoise 0.38, grey eyes, darker), seed 32
+#   vincent_low_px.png   same image; the guarded state is a darker, colder grade of it
+#   red_px.png           img2img from red_sketch.png (denoise 0.72), seed 51; the face the model
+#                        insisted on drawing was painted over with her hair by hand
+HORDE_SDXL = 'AlbedoBase XL (SDXL)'
+HORDE_LORA = [{'name': '120096', 'model': 1.0, 'clip': 1.0}]
 HORDE = {
     'vincent': dict(
         prompt=('pixel art, dark horror adventure game, 1boy, solo, young man, 20s, youthful face, smooth skin, clean shaven '
@@ -61,7 +69,7 @@ HORDE = {
         prompt=('pixel art, dark horror adventure game, 1girl, solo, lying on stomach, face down, face not visible, long red '
                 'hair spread on the ground, dark coat, arm outstretched, wet asphalt, empty parking lot, night, car headlights '
                 'shining on her from the side, from above, long shadows, ' + PIXEL_STYLE),
-        seed=11, anchor='bottom'),
+        seed=51, anchor='center', gamma=1.25, sat=0.8),
 }
 HORDE_MODEL = 'Pixel Illustrious'
 
