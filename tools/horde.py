@@ -26,7 +26,7 @@ def _req(method, path, body=None):
 
 
 def generate(prompt, out, model, w=512, h=320, seed=1, steps=28, cfg=6.5, negative='', sampler='k_euler_a',
-             loras=None, timeout=1500, verbose=True):
+             loras=None, timeout=7200, verbose=True):
     params = {'width': w, 'height': h, 'steps': steps, 'cfg_scale': cfg, 'seed': str(seed),
               'sampler_name': sampler, 'n': 1, 'karras': True}
     if loras:

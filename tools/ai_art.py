@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """AI-generated art for the face-to-face (first person) scenes.
 
+Default: drawn natively as pixel art by the "Pixel Illustrious" model on
+AI Horde (tools/horde.py, free community GPUs, slow anonymous queue). The
+raw outputs are cached in assets/ai_src/<name>_px.png and only cleaned up
+(16:9 crop, 2x2 pixel grid, palette tidy).
+
+Legacy (--photo): photographic images from pollinations.ai, pixelated.
+
 Images come from pollinations.ai (free, no key). The raw download is cached in
 assets/ai_src/ so runs are reproducible; each image is then cropped (removing
 the service watermark), graded dim and pixelated to the game's 480x270
@@ -32,6 +39,32 @@ STYLE = ('cinematic still, dark horror film, night, 35mm, film grain, muted desa
          'realistic proportions, deep shadows, single harsh light source')
 
 # name -> prompt, seed, grade options
+HORDE_NEG = ('lowres, worst quality, text, watermark, signature, photo, realistic, 3d, blurry, smooth gradient, '
+             'bright colors, cheerful, extra fingers, bad anatomy')
+PIXEL_STYLE = 'muted colors, dim lighting, limited palette'
+
+# Pixel-art faces drawn natively by a pixel-art model on AI Horde.
+HORDE = {
+    'vincent': dict(
+        prompt=('pixel art, dark horror adventure game, 1boy, solo, young man, 28 years old, bald, shaved head, grey eyes, '
+                'light stubble, tired expression, dark circles under eyes, pale skin, dark green polo shirt, name tag, '
+                'standing behind convenience store counter, cash register, looking at viewer, upper body, night, '
+                'fluorescent ceiling light, shelves in background, ' + PIXEL_STYLE),
+        seed=11),
+    'vincent_low': dict(
+        prompt=('pixel art, dark horror adventure game, 1boy, solo, young man, 28 years old, bald, shaved head, grey eyes, '
+                'light stubble, sad, looking down, arms crossed, dark green polo shirt, name tag, behind convenience store '
+                'counter, upper body, night, fluorescent ceiling light, shelves in background, ' + PIXEL_STYLE),
+        seed=11),
+    'red': dict(
+        prompt=('pixel art, dark horror adventure game, 1girl, solo, lying on stomach, face down, face not visible, long red '
+                'hair spread on the ground, dark coat, arm outstretched, wet asphalt, empty parking lot, night, car headlights '
+                'shining on her from the side, from above, long shadows, ' + PIXEL_STYLE),
+        seed=11),
+}
+HORDE_MODEL = 'Pixel Illustrious'
+
+# Earlier photographic versions (pollinations.ai), kept for reference only.
 ENTRIES = {
     'vincent': dict(
         prompt=('first person view across a convenience store counter at 2am, a tired 28 year old bald man '
@@ -128,6 +161,39 @@ def pixelate(src, dst, colors=28, gamma=1.15, scale=2, spread=0.035):
     im.save(dst, optimize=True)
 
 
+def clean_pixel_art(src, dst, colors=40, gamma=1.05):
+    """The source is already pixel art: crop to 16:9, snap to a 240x135 grid of
+    2x2 blocks, tidy the palette (no dithering), keep it dim."""
+    im = Image.open(src).convert('RGB')
+    w, h = im.size
+    ch = int(w * 9 / 16)
+    top = max(0, (h - ch) // 3)
+    im = im.crop((0, top, w, top + ch))
+    pw, ph = W // 2, H // 2
+    im = im.resize((pw, ph), Image.BOX)
+    a = np.asarray(im).astype(np.float32) / 255.0
+    a = np.clip(a ** gamma * 0.92, 0, 1)
+    pal = kmeans_palette(a.reshape(-1, 3), colors)
+    idx = (((a[:, :, None, :] - pal[None, None, :, :]) ** 2).sum(-1)).argmin(-1)
+    im = Image.fromarray((pal[idx] * 255 + 0.5).astype(np.uint8)).resize((W, H), Image.NEAREST)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    im.save(dst, optimize=True)
+
+
+def build_horde(names, refetch=False):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import horde
+    os.makedirs(SRC, exist_ok=True)
+    for name in names:
+        e = HORDE[name]
+        raw = os.path.join(SRC, name + '_px.png')
+        if refetch or not os.path.exists(raw):
+            print('generating', name, 'on AI Horde (' + HORDE_MODEL + ')')
+            horde.generate(e['prompt'], raw, HORDE_MODEL, 576, 384, e['seed'], negative=HORDE_NEG)
+        clean_pixel_art(raw, os.path.join(OUT, name + '.png'))
+        print('built', name)
+
+
 def build(names, refetch=False):
     os.makedirs(SRC, exist_ok=True)
     for name in names:
@@ -163,11 +229,14 @@ if __name__ == '__main__':
     ap.add_argument('--refetch')
     ap.add_argument('--try', dest='trial')
     ap.add_argument('--seeds', default='1,2,3')
+    ap.add_argument('--photo', action='store_true', help='use the old photographic pollinations pipeline')
     a = ap.parse_args()
     if a.trial:
         try_seeds(a.trial, [int(s) for s in a.seeds.split(',')])
         sys.exit()
-    if a.refetch:
-        build(a.refetch.split(','), refetch=True)
+    if a.photo:   # the old photographic pipeline
+        build(a.only.split(',') if a.only else list(ENTRIES), refetch=bool(a.refetch))
+    elif a.refetch:
+        build_horde(a.refetch.split(','), refetch=True)
     else:
-        build(a.only.split(',') if a.only else list(ENTRIES))
+        build_horde(a.only.split(',') if a.only else list(HORDE))
