@@ -26,14 +26,20 @@ def _req(method, path, body=None):
 
 
 def generate(prompt, out, model, w=512, h=320, seed=1, steps=28, cfg=6.5, negative='', sampler='k_euler_a',
-             loras=None, timeout=7200, verbose=True):
+             loras=None, timeout=7200, verbose=True, source=None, denoise=0.5):
     params = {'width': w, 'height': h, 'steps': steps, 'cfg_scale': cfg, 'seed': str(seed),
               'sampler_name': sampler, 'n': 1, 'karras': True}
     if loras:
         params['loras'] = loras
     full = prompt + (' ### ' + negative if negative else '')
-    job = _req('POST', '/generate/async', {'prompt': full, 'params': params, 'models': [model],
-                                            'r2': True, 'nsfw': False, 'censor_nsfw': True, 'trusted_workers': False})
+    body = {'prompt': full, 'params': params, 'models': [model],
+            'r2': True, 'nsfw': False, 'censor_nsfw': True, 'trusted_workers': False}
+    if source:   # img2img: keep the same character, change the pose/expression
+        with open(source, 'rb') as f:
+            body['source_image'] = base64.b64encode(f.read()).decode()
+        body['source_processing'] = 'img2img'
+        params['denoising_strength'] = denoise
+    job = _req('POST', '/generate/async', body)
     jid = job['id']
     t0 = time.time()
     last = None
@@ -76,5 +82,7 @@ if __name__ == '__main__':
     ap.add_argument('--seed', type=int, default=1)
     ap.add_argument('--steps', type=int, default=28)
     ap.add_argument('--neg', default='')
+    ap.add_argument('--source', help='img2img source image')
+    ap.add_argument('--denoise', type=float, default=0.5)
     a = ap.parse_args()
-    generate(a.prompt, a.out, a.model, a.w, a.h, a.seed, a.steps, negative=a.neg)
+    generate(a.prompt, a.out, a.model, a.w, a.h, a.seed, a.steps, negative=a.neg, source=a.source, denoise=a.denoise)

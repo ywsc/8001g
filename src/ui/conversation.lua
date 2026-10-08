@@ -131,7 +131,9 @@ function C:drawFace()
   love.graphics.setColor(1, 1, 1, 1)
   love.graphics.setCanvas()
   R.fx.blur, R.fx.desat = 0, 0
+  R.fx.glow = false          -- the painted face is already lit; bloom would blow it out
   R.postProcess()
+  R.fx.glow = true
 end
 
 local function whoColor(who)

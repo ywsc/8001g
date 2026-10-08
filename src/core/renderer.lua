@@ -212,7 +212,7 @@ function R.init()
   R.post.filmgrain.opacity = 0.14
   R.post.filmgrain.size = 1
   R.post.disable("blur", "desaturate")
-  R.fx = { blur = 0, desat = 0, grain = 0.14, vignette = 0.75, chroma = 0.6 }
+  R.fx = { blur = 0, desat = 0, grain = 0.14, vignette = 0.75, chroma = 0.6, glow = true }
   R.lastFx = {}
   R.saturation = 0.85
   R.exposure = 2.6
@@ -370,6 +370,10 @@ local function syncFx()
       p.disable("desaturate")
     end
     last.desat = fx.desat
+  end
+  if fx.glow ~= last.glow then
+    if fx.glow then p.enable("glow") else p.disable("glow") end
+    last.glow = fx.glow
   end
   if fx.grain ~= last.grain then p.filmgrain.opacity = fx.grain; last.grain = fx.grain end
   if fx.vignette ~= last.vignette then p.vignette.opacity = fx.vignette; last.vignette = fx.vignette end

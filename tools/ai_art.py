@@ -46,8 +46,9 @@ PIXEL_STYLE = 'muted colors, dim lighting, limited palette'
 # Pixel-art faces drawn natively by a pixel-art model on AI Horde.
 HORDE = {
     'vincent': dict(
-        prompt=('pixel art, dark horror adventure game, 1boy, solo, young man, 28 years old, bald, shaved head, grey eyes, '
-                'light stubble, tired expression, dark circles under eyes, pale skin, dark green polo shirt, name tag, '
+        prompt=('pixel art, dark horror adventure game, 1boy, solo, young man, 20s, youthful face, smooth skin, clean shaven '
+                'bald head, shaved head, grey eyes, faint stubble, tired expression, dark circles under eyes, pale skin, '
+                'dark green polo shirt, name tag, '
                 'standing behind convenience store counter, cash register, looking at viewer, upper body, night, '
                 'fluorescent ceiling light, shelves in background, ' + PIXEL_STYLE),
         seed=11),
@@ -60,7 +61,7 @@ HORDE = {
         prompt=('pixel art, dark horror adventure game, 1girl, solo, lying on stomach, face down, face not visible, long red '
                 'hair spread on the ground, dark coat, arm outstretched, wet asphalt, empty parking lot, night, car headlights '
                 'shining on her from the side, from above, long shadows, ' + PIXEL_STYLE),
-        seed=11),
+        seed=11, anchor='bottom'),
 }
 HORDE_MODEL = 'Pixel Illustrious'
 
@@ -161,13 +162,13 @@ def pixelate(src, dst, colors=28, gamma=1.15, scale=2, spread=0.035):
     im.save(dst, optimize=True)
 
 
-def clean_pixel_art(src, dst, colors=40, gamma=1.05):
+def clean_pixel_art(src, dst, colors=40, gamma=1.05, anchor='top'):
     """The source is already pixel art: crop to 16:9, snap to a 240x135 grid of
     2x2 blocks, tidy the palette (no dithering), keep it dim."""
     im = Image.open(src).convert('RGB')
     w, h = im.size
     ch = int(w * 9 / 16)
-    top = max(0, (h - ch) // 3)
+    top = {'top': 0, 'center': (h - ch) // 2, 'bottom': h - ch}[anchor]
     im = im.crop((0, top, w, top + ch))
     pw, ph = W // 2, H // 2
     im = im.resize((pw, ph), Image.BOX)
@@ -190,7 +191,7 @@ def build_horde(names, refetch=False):
         if refetch or not os.path.exists(raw):
             print('generating', name, 'on AI Horde (' + HORDE_MODEL + ')')
             horde.generate(e['prompt'], raw, HORDE_MODEL, 576, 384, e['seed'], negative=HORDE_NEG)
-        clean_pixel_art(raw, os.path.join(OUT, name + '.png'))
+        clean_pixel_art(raw, os.path.join(OUT, name + '.png'), anchor=e.get('anchor', 'top'))
         print('built', name)
 
 
