@@ -47,7 +47,9 @@ def generate(prompt, out, model, w=512, h=320, seed=1, steps=28, cfg=6.5, negati
         st = _req('GET', '/generate/check/' + jid)
         if st.get('done'):
             break
-        if not st.get('is_possible', True):
+        if not st.get('is_possible', True) and time.time() - t0 > 900:
+            # volunteer workers come and go; give up only after waiting a while
+            _req('DELETE', '/generate/status/' + jid)
             raise RuntimeError('no worker can run this request: ' + json.dumps(st))
         msg = 'queue %s wait %ss' % (st.get('queue_position'), st.get('wait_time'))
         if verbose and msg != last:
@@ -83,6 +85,9 @@ if __name__ == '__main__':
     ap.add_argument('--steps', type=int, default=28)
     ap.add_argument('--neg', default='')
     ap.add_argument('--source', help='img2img source image')
+    ap.add_argument('--lora', help='CivitAI LoRA id or name, e.g. 120096 (Pixel Art XL)')
     ap.add_argument('--denoise', type=float, default=0.5)
     a = ap.parse_args()
-    generate(a.prompt, a.out, a.model, a.w, a.h, a.seed, a.steps, negative=a.neg, source=a.source, denoise=a.denoise)
+    loras = [{'name': a.lora, 'model': 1.0, 'clip': 1.0}] if a.lora else None
+    generate(a.prompt, a.out, a.model, a.w, a.h, a.seed, a.steps, negative=a.neg, source=a.source, denoise=a.denoise,
+             loras=loras)
