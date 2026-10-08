@@ -231,12 +231,19 @@ local function plan()
   sec(1.5); y()
   for _ = 1, 3 do tap("interact"); sec(0.3) end
   sec(1.5); shot("vincent_secret")
+  local function endTalk()
+    while conv() and conv():active() do
+      local c = conv()
+      if c.conv:line() and c.shown >= #c.conv:line().text then tap("interact") else y() end
+    end
+    mash(10)
+  end
   say("I'd notice."); say("It's on your tag")
-  say("That's all."); mash(10)
+  say("That's all."); endTalk()
   if Game.flag("vincent_secret") ~= "out" then fail("secret flag not out") end
   use("Talk to the clerk"); sec(0.5)
   say("Can I get into the staff room?")
-  say("That's all."); mash(10)
+  say("That's all."); endTalk()
   if not Game.has("staff_key") then fail("no staff key") end
 
   -- the lot and the woman in the headlights
@@ -249,17 +256,16 @@ local function plan()
   shot("red_face")
   say("Hey. Hey, are you okay?"); say("(Touch her shoulder.)")
   sec(0.5); shot("red_touch")
-  say("(Step back.)"); mash(10)
+  say("(Step back.)"); endTalk()
 
   -- the staff room and the note
   route({ { 330, 250 }, { 400, 116 } }); face("up"); use("Back inside"); sec(1.2)
   route({ { 300, 262 }, { 300, 100 }, { 454, 100 }, { 454, 70 } }); face("up"); use("Staff room"); sec(1.2)
   shot("staff_room")
-  route({ { 128, 120 }, { 100, 74 } }); face("up"); use("Laptop")
-  goto(40, 66); face("up"); use("Laptop"); sec(0.4)
+  route({ { 128, 110 }, { 70, 100 }, { 70, 70 }, { 40, 70 } }); face("up"); use("Laptop"); sec(0.4)
   shot("laptop")
   tap("cancel"); y()
-  route({ { 100, 74 } }); face("up"); use("Note on the wall")
+  route({ { 70, 72 }, { 100, 74 } }); face("up"); use("Note on the wall")
   mash(5); sec(2.6)
   shot("note")
   tap("interact"); sec(5)
