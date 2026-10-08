@@ -138,6 +138,37 @@ vec4 effect(vec4 color, Image tex, vec2 uv, vec2 sc) {
 }
 ]]
 
+-- 9-tap separable gaussian (linear-sampling offsets) whose spread is a
+-- uniform: unlike moonshine's gaussianblur it never recompiles and stays
+-- valid for any strength.
+local function blurEffect()
+  local shader = love.graphics.newShader([[
+    extern vec2 direction;
+    extern float spread;
+    vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc) {
+      vec2 o1 = direction * 1.3846153846 * spread;
+      vec2 o2 = direction * 3.2307692308 * spread;
+      vec4 c = Texel(tex, tc) * 0.2270270270;
+      c += (Texel(tex, tc + o1) + Texel(tex, tc - o1)) * 0.3162162162;
+      c += (Texel(tex, tc + o2) + Texel(tex, tc - o2)) * 0.0702702703;
+      return c * color;
+    }
+  ]])
+  local spread = 1
+  return moonshine.Effect({
+    name = "blur",
+    setters = { spread = function(v) spread = v end },
+    defaults = { spread = 1 },
+    draw = function(buffer)
+      shader:send("spread", spread)
+      shader:send("direction", { 1 / R.W, 0 })
+      moonshine.draw_shader(buffer, shader)
+      shader:send("direction", { 0, 1 / R.H })
+      moonshine.draw_shader(buffer, shader)
+    end,
+  })
+end
+
 local function solidImage(r, g, b, a)
   local d = love.image.newImageData(1, 1)
   d:setPixel(0, 0, r, g, b, a or 1)
@@ -164,7 +195,7 @@ function R.init()
 
   R.post = moonshine(R.W, R.H, moonshine.effects.glow)
       .chain(moonshine.effects.desaturate)
-      .chain(moonshine.effects.gaussianblur)
+      .chain(blurEffect())
       .chain(moonshine.effects.chromasep)
       .chain(moonshine.effects.vignette)
       .chain(moonshine.effects.filmgrain)
@@ -172,7 +203,6 @@ function R.init()
   R.post.glow.strength = 4
   R.post.desaturate.strength = 0
   R.post.desaturate.tint = { 255, 255, 255 }
-  R.post.gaussianblur.sigma = 1
   R.post.chromasep.radius = 0.6
   R.post.chromasep.angle = 0.3
   R.post.vignette.radius = 0.85
@@ -181,7 +211,7 @@ function R.init()
   R.post.vignette.color = { 4, 3, 8 }
   R.post.filmgrain.opacity = 0.14
   R.post.filmgrain.size = 1
-  R.post.disable("gaussianblur", "desaturate")
+  R.post.disable("blur", "desaturate")
   R.fx = { blur = 0, desat = 0, grain = 0.14, vignette = 0.75, chroma = 0.6 }
   R.lastFx = {}
   R.saturation = 0.85
@@ -327,9 +357,9 @@ local function syncFx()
   local fx, last, p = R.fx, R.lastFx, R.post
   if fx.blur ~= last.blur then
     if fx.blur > 0.05 then
-      p.enable("gaussianblur"); p.gaussianblur.sigma = fx.blur
+      p.enable("blur"); p.blur.spread = fx.blur
     else
-      p.disable("gaussianblur")
+      p.disable("blur")
     end
     last.blur = fx.blur
   end

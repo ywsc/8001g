@@ -225,6 +225,33 @@ tests[#tests + 1] = { "neighborhood: gate memory + broken lock", function()
   check(Game.has("lock"), "broken lock picked up")
 end }
 
+tests[#tests + 1] = { "render smoke: every scene and post-fx strength", function()
+  local R = require("src.core.renderer")
+  local function frame()
+    G.scenes.draw()
+    R.beginUI(); G.ui.draw(); G.scenes.drawOverlay(); R.endUI()
+    R.present()
+  end
+  for _, name in ipairs({ "title", "apartment", "neighborhood", "ending" }) do
+    Game.reset()
+    startScene(name, { skipIntro = true })
+    local ok, err = pcall(frame)
+    check(ok, "renders " .. name .. ": " .. tostring(err))
+  end
+  -- the hunger blackout drives blur/desaturation through every strength
+  for _, f in ipairs({ 0.001, 0.02, 0.06, 0.3, 1.0, 0 }) do
+    G.scenes.current.faint = f
+    step(1 / 60)
+    local ok, err = pcall(frame)
+    check(ok, "renders with faint=" .. f .. ": " .. tostring(err))
+  end
+  G.state.flashlight = true
+  Game.give("phone", 1, true)
+  local ok, err = pcall(frame)
+  check(ok, "renders with flashlight: " .. tostring(err))
+  check(R.lightCount and R.lightCount > 0, "lights reach the shader")
+end }
+
 function T.start(args)
   Input.setVirtual(true)
   print("Running " .. #tests .. " test groups")

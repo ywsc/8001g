@@ -17,6 +17,7 @@ local function sec(s) frames(math.floor(s * 60)) end
 local function shot(name)
   local path = out .. "/" .. string.format("%02d_%s.png", #shots + 1, name)
   shots[#shots + 1] = path
+  G.renderNext = true
   G.capture(path)
   y()
 end
@@ -157,8 +158,10 @@ local function plan()
   shot("outside_start")
   route({ { 440, 470 }, { 560, 470 } })
   shot("street_west")
-  goto(600, 470)                         -- the crossroads: hunger attack
-  sec(1.6); shot("faint")
+  goto(566, 470)
+  Input.press("right"); sec(0.3); Input.releaseAll()   -- step onto the crossroads
+  sec(1.8); shot("faint")
+  sec(1.0); shot("faint_dialogue")
   mash(60)
   shot("after_faint")
   route({ { 596, 400 }, { 596, 200 }, { 620, 162 } })
@@ -193,6 +196,8 @@ function Bot.start(args)
   out = type(args.out) == "string" and args.out or "tests/out"
   os.execute("mkdir -p " .. out)
   Input.setVirtual(true)
+  G.renderOnDemand = not args.render
+  pcall(love.window.setVSync, 0)
   G.scenes.switch(G.sceneList.title, {})
   co = coroutine.create(plan)
   G.hook = function()

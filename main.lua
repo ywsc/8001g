@@ -108,6 +108,9 @@ function G.capture(path, cb)
 end
 
 function love.draw()
+  -- the test bot only renders the frames it captures (software GL is slow)
+  if G.renderOnDemand and not G.renderNext then return end
+  G.renderNext = false
   SM.draw()
   R.beginUI()
   if SM.current and SM.current.drawUI then SM.current:drawUI() else UI.draw() end
