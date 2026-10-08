@@ -4,7 +4,9 @@
 Images come from pollinations.ai (free, no key). The raw download is cached in
 assets/ai_src/ so runs are reproducible; each image is then cropped (removing
 the service watermark), graded dim and pixelated to the game's 480x270
-resolution with a limited palette.
+resolution as pixel art: shapes flattened, a small k-means palette, the same
+4x4 ordered dither as the sprites, dark selective outlines, and 2x2 art
+pixels (240x135 upscaled with nearest neighbour).
 
 Usage:
   python3 tools/ai_art.py                 # fetch missing + rebuild all
@@ -72,18 +74,56 @@ def fetch(prompt, seed, path, tries=4):
     raise SystemExit('could not fetch ' + path)
 
 
-def pixelate(src, dst, colors=56, gamma=1.15):
+BAYER4 = (np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]], np.float32) + 0.5) / 16.0 - 0.5
+
+
+def kmeans_palette(px, k, iters=12, seed=0):
+    """Small k-means in RGB (no sklearn needed)."""
+    rng = np.random.default_rng(seed)
+    pts = px[rng.choice(len(px), min(len(px), 20000), replace=False)]
+    # init: spread over luminance so darks and lights both get colours
+    lum = pts @ np.array([0.299, 0.587, 0.114], np.float32)
+    order = np.argsort(lum)
+    cent = pts[order[np.linspace(0, len(pts) - 1, k).astype(int)]].copy()
+    for _ in range(iters):
+        d = ((pts[:, None, :] - cent[None, :, :]) ** 2).sum(-1)
+        lab = d.argmin(1)
+        for i in range(k):
+            m = lab == i
+            if m.any():
+                cent[i] = pts[m].mean(0)
+    return cent
+
+
+def pixelate(src, dst, colors=28, gamma=1.15, scale=2, spread=0.035):
+    """Photo -> pixel art: flatten shapes, small palette, ordered dither, outlines."""
     im = Image.open(src).convert('RGB')
     w, h = im.size
     im = im.crop((0, 0, w, int(h * 0.9)))                 # watermark lives in the bottom strip
-    im = im.resize((W, H), Image.LANCZOS)
-    im = ImageEnhance.Color(im).enhance(0.8)
+    pw, ph = W // scale, H // scale
+    # flatten photographic texture into shapes before shrinking
+    im = im.filter(ImageFilter.MedianFilter(5))
+    im = im.resize((pw, ph), Image.BOX)
+    im = ImageEnhance.Color(im).enhance(0.85)
+    im = ImageEnhance.Contrast(im).enhance(1.12)
     a = np.asarray(im).astype(np.float32) / 255.0
-    a = a ** gamma                                          # dimmer mid-tones
-    a = np.clip(a * 1.04, 0, 1)
-    im = Image.fromarray((a * 255 + 0.5).astype(np.uint8))
-    im = im.filter(ImageFilter.UnsharpMask(radius=1, percent=60, threshold=2))
-    im = im.quantize(colors=colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG).convert('RGB')
+    a = np.clip(a ** gamma, 0, 1)
+    pal = kmeans_palette(a.reshape(-1, 3), colors)
+    # ordered (Bayer) dither against the palette, same pattern the sprites use
+    yy, xx = np.mgrid[0:ph, 0:pw]
+    t = BAYER4[yy % 4, xx % 4][..., None] * spread
+    d = (((a + t)[:, :, None, :] - pal[None, None, :, :]) ** 2).sum(-1)
+    idx = d.argmin(-1)
+    out = pal[idx]
+    # selective outline: darken pixels on strong luminance edges
+    lum = out @ np.array([0.299, 0.587, 0.114], np.float32)
+    gy, gx = np.gradient(lum)
+    edge = np.hypot(gx, gy) > 0.13
+    darker = lum < np.maximum(np.roll(lum, 1, 0), np.roll(lum, 1, 1))
+    darkest = pal[np.argmin(pal @ np.array([0.299, 0.587, 0.114], np.float32))]
+    out[edge & darker] = out[edge & darker] * 0.45 + darkest * 0.55
+    im = Image.fromarray((np.clip(out, 0, 1) * 255 + 0.5).astype(np.uint8))
+    im = im.resize((W, H), Image.NEAREST)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     im.save(dst, optimize=True)
 
@@ -96,7 +136,7 @@ def build(names, refetch=False):
         if refetch or not os.path.exists(raw):
             print('fetching', name)
             fetch(e['prompt'], e['seed'], raw)
-        pixelate(raw, os.path.join(OUT, name + '.png'), e['colors'], e['gamma'])
+        pixelate(raw, os.path.join(OUT, name + '.png'), e.get('palette', 28), e['gamma'])
         print('built', name)
 
 

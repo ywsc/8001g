@@ -75,6 +75,7 @@ function love.load(arglist)
   end
   SM.switch(G.sceneList[start], { skipIntro = args["skip-intro"], cell = args.cell,
     spawn = args.cell and (args.cell == "store" and "from_street" or "from_store") or nil })
+  if args.talk == "vincent" then G.sceneList.mart:talkVincent() elseif args.talk == "red" then G.sceneList.mart:talkRed() end
   R.debugView = args.view
   R.debugPrint = args.lightdump
   R.onlyLight = tonumber(args.onlylight)

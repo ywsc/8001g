@@ -118,9 +118,10 @@ function C:drawFace()
   if img then
     local t = self.t
     -- breathing drift + flickering tube light
-    local z = 1 + self.zoom * 0.12 + math.sin(t * 0.5) * 0.004
+    -- whole-pixel drift only: any fractional scaling would smear the pixel art
+    local z = 1
     local ox = math.floor(math.sin(t * 0.21) * 2 + 0.5)
-    local oy = math.floor(math.sin(t * 0.33) * 1.5 + 0.5)
+    local oy = math.floor(math.sin(t * 0.33) * 1.5 + 0.5) - math.floor(self.zoom * 6 + 0.5)
     local fl = 0.93 + 0.07 * love.math.noise(t * 3.1, 4.2)
     if love.math.noise(t * 1.3, 9) > 0.86 then fl = fl * 0.75 end
     love.graphics.setColor(fl, fl, fl * 1.02, 1)
