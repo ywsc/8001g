@@ -37,7 +37,8 @@ function Apartment:pickup(def)
   local prop = w:addProp({ sprite = "apartment/" .. def.sprite, x = def.x, y = def.y, baseH = def.baseH, sortY = def.sortY })
   local taken = false
   local it = w:addInteract({
-    x = def.x - 3, y = def.y - 3, w = prop.fw + 6, h = prop.fh + 6,
+    -- things lying on furniture can be reached from in front of it
+    x = def.x - 3, y = def.y - 3, w = prop.fw + 6, h = prop.fh + 6 + (def.baseH or 0),
     label = def.label, priority = 4,
     enabled = function() return not taken end,
     action = function()
@@ -154,9 +155,9 @@ function Apartment:buildInteractions()
   local w = self.world
 
   -- --- pickups -----------------------------------------------------------
-  self:pickup({ sprite = "coin", x = 40, y = 66, baseH = 16, sortY = 100, item = "coin", count = 1, label = "Coin",
+  self:pickup({ sprite = "coin", x = 46, y = 66, baseH = 16, sortY = 100, item = "coin", count = 1, label = "Coin",
     lines = { "A coin, warm from my own body heat. Gross." } })
-  self:pickup({ sprite = "coin", x = 31, y = 82, baseH = 15, sortY = 100, item = "coin", count = 1, label = "Coin",
+  self:pickup({ sprite = "coin", x = 44, y = 86, baseH = 15, sortY = 100, item = "coin", count = 1, label = "Coin",
     lines = { "Another one, down between the sheets." } })
   self:pickup({ sprite = "coin", x = 282, y = 150, item = "coin", label = "Coin",
     lines = { "A coin by the drain. I'm not too proud." } })
@@ -325,7 +326,7 @@ function Apartment:intro()
       local start = self.eyelid
       local t = 0
       Script.waitUntil(function()
-        t = t + love.timer.getDelta() * 2.2
+        t = t + Script.dt * 2.2
         self.eyelid = start + (v - start) * math.min(1, t)
         return t >= 1
       end)

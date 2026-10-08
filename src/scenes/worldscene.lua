@@ -20,6 +20,10 @@ function WS:new()
 end
 
 function WS:baseEnter()
+  self.cutscene = false
+  self.camTarget = nil
+  self.faint = 0
+  self.eyelid = 0
   G.ui.reset()
   Script.clear()
   G.world = self.world
@@ -162,7 +166,7 @@ function WS:walkTo(x, y, timeout)
   Script.waitUntil(function()
     local dx, dy = x - pl.x, y - pl.y
     local d = math.sqrt(dx * dx + dy * dy)
-    t = t + love.timer.getDelta()
+    t = t + Script.dt
     if d < 2 or t > (timeout or 6) then
       pl.autoMove = nil
       return true

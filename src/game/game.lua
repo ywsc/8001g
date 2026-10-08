@@ -142,7 +142,7 @@ function Game.update(dt)
   st.playTime = st.playTime + dt
   st.clock = st.clock + dt / MINUTE_SECONDS
   if not Game.flag("faint_done") then
-    st.hunger = math.min(84, st.hunger + dt * 0.05)
+    if st.hunger < 84 then st.hunger = math.min(84, st.hunger + dt * 0.05) end
   else
     st.hunger = math.min(100, st.hunger + dt * 0.03)
   end

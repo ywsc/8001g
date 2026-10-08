@@ -1,6 +1,6 @@
 -- Coroutine cutscene runner. Inside a script function call S.wait(seconds)
 -- or S.waitUntil(fn); the coroutine resumes once the condition holds.
-local S = { tasks = {} }
+local S = { tasks = {}, dt = 0 }
 
 local function step(task, ...)
   local ok, req = coroutine.resume(task.co, ...)
@@ -30,6 +30,7 @@ function S.waitUntil(fn)
 end
 
 function S.update(dt)
+  S.dt = dt
   local i = 1
   while i <= #S.tasks do
     local task = S.tasks[i]
