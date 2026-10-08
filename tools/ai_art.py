@@ -51,12 +51,12 @@ HORDE = {
                 'dark green polo shirt, name tag, '
                 'standing behind convenience store counter, cash register, looking at viewer, upper body, night, '
                 'fluorescent ceiling light, shelves in background, ' + PIXEL_STYLE),
-        seed=11),
+        seed=11, gamma=1.45, sat=0.7),
     'vincent_low': dict(
         prompt=('pixel art, dark horror adventure game, 1boy, solo, young man, 28 years old, bald, shaved head, grey eyes, '
                 'light stubble, sad, looking down, arms crossed, dark green polo shirt, name tag, behind convenience store '
                 'counter, upper body, night, fluorescent ceiling light, shelves in background, ' + PIXEL_STYLE),
-        seed=11),
+        seed=11, gamma=1.45, sat=0.7),
     'red': dict(
         prompt=('pixel art, dark horror adventure game, 1girl, solo, lying on stomach, face down, face not visible, long red '
                 'hair spread on the ground, dark coat, arm outstretched, wet asphalt, empty parking lot, night, car headlights '
@@ -162,7 +162,7 @@ def pixelate(src, dst, colors=28, gamma=1.15, scale=2, spread=0.035):
     im.save(dst, optimize=True)
 
 
-def clean_pixel_art(src, dst, colors=40, gamma=1.05, anchor='top'):
+def clean_pixel_art(src, dst, colors=40, gamma=1.05, anchor='top', sat=1.0):
     """The source is already pixel art: crop to 16:9, snap to a 240x135 grid of
     2x2 blocks, tidy the palette (no dithering), keep it dim."""
     im = Image.open(src).convert('RGB')
@@ -172,6 +172,7 @@ def clean_pixel_art(src, dst, colors=40, gamma=1.05, anchor='top'):
     im = im.crop((0, top, w, top + ch))
     pw, ph = W // 2, H // 2
     im = im.resize((pw, ph), Image.BOX)
+    im = ImageEnhance.Color(im).enhance(sat)
     a = np.asarray(im).astype(np.float32) / 255.0
     a = np.clip(a ** gamma * 0.92, 0, 1)
     pal = kmeans_palette(a.reshape(-1, 3), colors)
@@ -191,7 +192,8 @@ def build_horde(names, refetch=False):
         if refetch or not os.path.exists(raw):
             print('generating', name, 'on AI Horde (' + HORDE_MODEL + ')')
             horde.generate(e['prompt'], raw, HORDE_MODEL, 576, 384, e['seed'], negative=HORDE_NEG)
-        clean_pixel_art(raw, os.path.join(OUT, name + '.png'), anchor=e.get('anchor', 'top'))
+        clean_pixel_art(raw, os.path.join(OUT, name + '.png'), anchor=e.get('anchor', 'top'),
+                        gamma=e.get('gamma', 1.05), sat=e.get('sat', 1.0))
         print('built', name)
 
 
