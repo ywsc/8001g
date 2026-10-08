@@ -98,6 +98,7 @@ function N:build(withPlayer)
   for _, d in ipairs({ { 110, 452 }, { 300, 452, nil, "soft" }, { 840, 452, nil, "broken" }, { 1240, 452 } }) do lamp(d[1], d[2], d[3], d[4]) end
   for _, d in ipairs({ { 210, 592, true }, { 430, 592, true }, { 900, 592, true, "dying" }, { 1110, 592, true } }) do lamp(d[1], d[2], d[3], d[4]) end
   lamp(578, 330, false, "soft")
+  lamp(728, 456, true, "soft", { intensity = 1.0 })
   lamp(718, 280, true)
   lamp(718, 690, true, "broken")
   P({ sprite = "traffic_light", x = 586, y = 412, collider = { 4, 56, 4, 4 } })
@@ -260,7 +261,6 @@ function N:buildInteractions()
   edge(0, 440, 22, 160, { "West is just more apartment blocks. Dark windows all the way down.", "Nothing for me that way. The store's east." })
   edge(1258, 440, 22, 160, { "Past the store there's only the underpass. Not tonight." })
   edge(560, 936, 160, 24, { "The road runs on into the dark past the lot.", "No streetlights down there. I'm not going down there." })
-  edge(576, 144, 144, 10, { "The gate's chained shut." })
 
   -- the hunger attack at the crossroads
   w:addTrigger({ x = 576, y = 448, w = 144, h = 144, fn = function() self:faintEvent() end,

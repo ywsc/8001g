@@ -64,7 +64,10 @@ function WS:update(dt)
     self:openPause()
   end
   if self:canAct() then
-    if Input.pressed("inventory") then G.ui.openInventory() end
+    if Input.pressed("inventory") then
+      Input.consume("inventory")
+      G.ui.openInventory()
+    end
     if Input.pressed("flashlight") then
       if Game.has("phone") then Game.toggleFlashlight() end
     end
