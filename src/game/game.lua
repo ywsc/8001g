@@ -82,7 +82,8 @@ end
 Game.STAGES = {
   { title = "Scrape together some money" },
   { title = "Get to the 24-hour store" },
-  { title = "End of Part I" },
+  { title = "The 24/7 MART" },
+  { title = "..." },
 }
 
 function Game.stage1Done()
@@ -111,6 +112,15 @@ function Game.objectives()
       end
     end
   end
+  if st.stage == 3 then
+    list[#list + 1] = { text = "Buy something to eat", done = Game.flag("bought_food") }
+    if Game.flag("tried_staff_door") then
+      list[#list + 1] = { text = "Get into the staff room", done = Game.flag("entered_staff") }
+    end
+    if Game.flag("saw_running_car") then
+      list[#list + 1] = { text = "Check on the woman in the headlights", done = Game.flag("met_red") }
+    end
+  end
   return list
 end
 
@@ -133,6 +143,7 @@ function Game.checkQuest()
     end
   elseif st.stage == 2 and Game.flag("reached_store") then
     st.stage = 3
+    if G.ui then G.ui.objectiveUpdated("Objective complete") end
   end
 end
 
@@ -205,6 +216,7 @@ Game.NEWSPAPER = {
 }
 
 function Game.readNewspaper()
+  Game.setFlag("read_paper")
   if G.ui then G.ui.openDocument(Game.NEWSPAPER) end
 end
 

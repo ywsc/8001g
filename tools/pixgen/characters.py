@@ -32,8 +32,9 @@ def finish(s, bottom=31):
     return s
 
 
-def front(walk=0, back=False, breathe=0):
+def front(walk=0, back=False, breathe=0, shirt=None, bald=False, polo=False):
     """walk: 0 idle, 1..4 walk frames."""
+    shirt = shirt or P.HOODIE
     s = Sprite(FW, FH)
     R = s.rect_mask
     legL = legR = 0          # how much each foot is lifted
@@ -59,27 +60,31 @@ def front(walk=0, back=False, breathe=0):
     shade_part(s, R(6, 21 + by, 8, 2), P.JEANS, 0.5, 10, 4)
     # torso (hoodie)
     torso = R(6, 12 + by, 8, 10) | R(5, 13 + by, 10, 3)
-    shade_part(s, torso, P.HOODIE, 0.62, 10, 5, top=12 + by, vgrad=0.15)
-    s.paint(R(6, 21 + by, 8, 1), ramp=P.HOODIE, value=0.2, dither=False)       # hem
+    shade_part(s, torso, shirt, 0.62, 10, 5, top=12 + by, vgrad=0.15)
+    s.paint(R(6, 21 + by, 8, 1), ramp=shirt, value=0.2, dither=False)       # hem
     if not back:
-        s.paint(R(7, 17 + by, 6, 1), ramp=P.HOODIE, value=0.25, dither=False)   # pocket line
-        s.paint(R(7, 18 + by, 1, 2) | R(12, 18 + by, 1, 2), ramp=P.HOODIE, value=0.3, dither=False)
-        s.paint(R(8, 12 + by, 1, 3) | R(11, 12 + by, 1, 3), ramp=P.PAPER, value=0.55, dither=False)
+        s.paint(R(7, 17 + by, 6, 1), ramp=shirt, value=0.25, dither=False)   # pocket line
+        s.paint(R(7, 18 + by, 1, 2) | R(12, 18 + by, 1, 2), ramp=shirt, value=0.3, dither=False)
+        if not polo:
+            s.paint(R(8, 12 + by, 1, 3) | R(11, 12 + by, 1, 3), ramp=P.PAPER, value=0.55, dither=False)
+        else:
+            s.paint(R(7, 12 + by, 2, 2) | R(11, 12 + by, 2, 2), ramp=shirt, value=0.85, dither=False)   # collar
+            s.paint(R(11, 15 + by, 2, 1), ramp=P.PAPER, value=0.8, dither=False)                         # name tag
         s.paint(R(9, 15 + by, 2, 1), ramp=Ramp.from_base('#3a2a18', 4), value=0.5, dither=False)  # stain
-        s.paint(R(7, 11 + by, 6, 1), ramp=P.HOODIE, value=0.3, dither=False)   # collar
+        s.paint(R(7, 11 + by, 6, 1), ramp=shirt, value=0.3, dither=False)   # collar
     else:
         hood = R(7, 11 + by, 6, 4)
-        shade_part(s, hood, P.HOODIE, 0.5, 10, 3)
-        s.paint(R(7, 14 + by, 6, 1), ramp=P.HOODIE, value=0.25, dither=False)
+        shade_part(s, hood, shirt, 0.5, 10, 3)
+        s.paint(R(7, 14 + by, 6, 1), ramp=shirt, value=0.25, dither=False)
     # arms + hands
     for ax, sw, base in ((4, armL, 0.65), (14, armR, 0.4)):
-        shade_part(s, R(ax, 13 + by + sw, 2, 7), P.HOODIE, base, ax + 1, 1)
+        shade_part(s, R(ax, 13 + by + sw, 2, 7), shirt, base, ax + 1, 1)
         s.paint(R(ax, 20 + by + sw, 2, 2), ramp=P.SKIN, value=base * 0.9 + 0.1, dither=False)
     # neck + head
     s.paint(R(9, 11 + by, 2, 1), ramp=P.SKIN, value=0.3, dither=False)
     head = R(7, 4 + by, 6, 7) | R(6, 5 + by, 8, 5)
     if back:
-        shade_part(s, head, P.HAIR, 0.7, 10, 4)
+        shade_part(s, head, P.SKIN if bald else P.HAIR, 0.7, 10, 4)
         s.paint(R(7, 10 + by, 6, 1), ramp=P.HAIR, value=0.35, dither=False)
         s.paint(R(6, 7 + by, 1, 2) | R(13, 7 + by, 1, 2), ramp=P.SKIN, value=0.3, dither=False)
     else:
@@ -99,8 +104,13 @@ def front(walk=0, back=False, breathe=0):
     hair = R(6, 3 + by, 8, 3) | R(7, 2 + by, 2, 1) | R(10, 2 + by, 1, 1) | R(12, 2 + by, 1, 2) | R(6, 5 + by, 1, 2) | R(13, 5 + by, 1, 3)
     if not back:
         hair |= R(7, 5 + by, 2, 1)
-    shade_part(s, hair, P.HAIR, 0.75, 9, 4)
-    s.paint(R(8, 3 + by, 1, 1) | R(11, 3 + by, 1, 1), ramp=P.HAIR, value=1.0, dither=False)
+    if bald:
+        scalp = R(7, 3 + by, 6, 3) | R(6, 4 + by, 8, 2)
+        shade_part(s, scalp, P.SKIN, 0.85, 9, 4)
+        s.paint(R(8, 3 + by, 2, 1), ramp=P.SKIN, value=1.0, dither=False)
+    else:
+        shade_part(s, hair, P.HAIR, 0.75, 9, 4)
+        s.paint(R(8, 3 + by, 1, 1) | R(11, 3 + by, 1, 1), ramp=P.HAIR, value=1.0, dither=False)
     return finish(s)
 
 

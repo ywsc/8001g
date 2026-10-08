@@ -99,3 +99,70 @@ heartbeat, monologue) and decides to hurry to the store.
 7. Scenes: title → apartment → neighbourhood → chapter end.
 8. Tests: headless logic tests + a scripted bot playthrough that completes
    both scenes and captures screenshots for visual QA (`tools/run_tests.sh`).
+
+---
+
+## 4. Interrogation mode (Scene 3 onward)
+
+The game now has two phases:
+
+* **Exploration** (top-down, as before): walk around, read things, pick up
+  items. Items and flags gathered here are **clues**.
+* **Face-to-face** (first person): talking to an NPC switches the screen to a
+  painted view of them across from you. The world disappears; it's just their
+  face, the light and what you say.
+
+### Secrets
+
+Every NPC has a **secret**. It's reached by talking, not by picking the right
+option once:
+
+* Each NPC has a hidden **openness** (0–100) that persists between
+  conversations. The header shows a mood word (*shut off, guarded, wary,
+  listening, open*) and a one-line cue when it moves.
+* Kind, attentive replies raise it. Pushing, rudeness and showing the wrong
+  item lower it. At 0 the NPC ends the conversation. They thaw a little when
+  you come back.
+* Some topics only appear after other topics, after something you saw while
+  exploring (e.g. reading the newspaper unlocks *"The missing kid"*), or past
+  an openness threshold.
+* **Show something...** lets you present any inventory item as a clue.
+* The secret needs the right approach at the right openness. Once told:
+  `npc.secret = true`, the header shows *SECRET LEARNED*, and story
+  consequences unlock: flags, new topics, items.
+
+### Scene 3 – the 24/7 MART
+
+Three cells with fade transitions: the **shop floor**, the **staff room**
+(locked) and the **parking lot**.
+
+* **DIALOGUEWVINCENT1** (`src/dialogue/vincent.lua`): greeting → *you look
+  tired* → *how long have you worked here* → regulars, the missing boy (clue),
+  what he does after his shift → *are you actually okay?* → secret (he hates
+  the job; lonely and desperate every day). Leaving the conversation after
+  that sets `vincent_secret = "out"`. In a **later** conversation, if you ask
+  about the staff room, he gives you the key. You can also buy food from him
+  here, which finally deals with the hunger.
+* **Staff room**: Vincent's laptop (messages, tabs, a spreadsheet counting
+  days), leftover pasta (you can eat it), a 2009 pin-up calendar, his cot and
+  lockers. The note on the wall says **"wake up"**. Reading it teleports you to
+  **Scene 4**, which is a placeholder until it's designed.
+* **Parking lot**: a car idling with its headlights on and the driver's door
+  open. Following the beam leads to a red-haired woman lying face down.
+  Interacting starts **DIALOGUEWRED1** (`src/dialogue/red.lua`). Only the
+  opening is written so far; the file marks where it continues.
+
+### Art for face-to-face scenes
+
+Painted with an AI image model (pollinations.ai, free), cached in
+`assets/ai_src/`, then pixelated to 480×270 with a limited palette by
+`tools/ai_art.py`. The model can't make isolated game sprites, so the top-down
+cells still use the procedural generator.
+
+### Writing a new NPC
+
+Copy `src/dialogue/red.lua`. Each node is `{ say = lines, choices = {...} }`,
+and a line can be plain text (the NPC speaks), `{text, who="narration"}` or
+`{text, who="you"}`. Choices take `open = ±n`, `need = minimum openness`,
+`when = fn`, `go = node | fn`. Topics show in the hub menu. `present` maps item
+ids to reaction nodes. Call `conv:revealSecret()` in the secret node.

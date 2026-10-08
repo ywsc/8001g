@@ -429,6 +429,43 @@ def door_chime():
     return reverb(x, 1.5, 0.3)
 
 
+def engine_idle():
+    d = 4.0
+    t = t_(d)
+    f = 31 + 1.5 * np.sin(2 * np.pi * 0.7 * t)
+    ph = np.cumsum(2 * np.pi * f / SR)
+    x = signal.sawtooth(ph) * 0.5 + np.sin(ph * 2) * 0.3
+    x = lp(x, 260) + lp(noise(d), 180) * 0.25
+    x *= 0.85 + 0.15 * np.sin(2 * np.pi * 7.75 * t)
+    return loopify(x, 0.5)
+
+
+def register():
+    d = 0.5
+    n = int(d * SR)
+    x = np.zeros(n)
+    for at in (0.0, 0.12):
+        i = int(at * SR)
+        m = int(0.09 * SR)
+        x[i:i + m] += sine(2000, m) * expdecay(m, 0.03) * 0.6
+    x += bp(noise(d), 800, 3000) * expdecay(n, 0.05) * 0.3
+    return x
+
+
+def open_up():
+    d = 1.4
+    n = int(d * SR)
+    x = (sine(523.3, n) * 0.5 + sine(659.3, n) * 0.35) * env(n, 0.08, 1.2)
+    return reverb(lp(x, 2000), 1.2, 0.4)
+
+
+def close_off():
+    d = 1.0
+    n = int(d * SR)
+    x = (sine(98, n) + sine(103.8, n) * 0.6) * env(n, 0.02, 0.9)
+    return reverb(lp(x, 600), 1.0, 0.3)
+
+
 def build():
     jobs = {
         'amb_apartment': amb_apartment, 'amb_outdoor': amb_outdoor, 'drone': drone,
@@ -439,10 +476,11 @@ def build():
         'bed_creak': bed_creak, 'fridge_open': fridge_open, 'fridge_close': fridge_close,
         'door_locked': door_locked, 'door_unlock': door_unlock, 'door_open': door_open,
         'door_close': door_close, 'gate_rattle': gate_rattle, 'phone_ring': phone_ring,
-        'thud': thud, 'door_chime': door_chime,
+        'thud': thud, 'door_chime': door_chime, 'engine_idle': engine_idle, 'register': register,
+        'open_up': open_up, 'close_off': close_off,
     }
     for name, fn in jobs.items():
-        peak = 0.5 if name.startswith('amb') or name in ('drone', 'tinnitus', 'buzz', 'tv_static', 'fridge_hum') else 0.85
+        peak = 0.5 if name.startswith('amb') or name in ('drone', 'tinnitus', 'buzz', 'tv_static', 'fridge_hum', 'engine_idle') else 0.85
         save(name, fn(), peak)
     # footsteps: a few variants mixed into one file each (the engine pitch-shifts)
     for kind in ('wood', 'carpet', 'tile', 'concrete', 'grass'):

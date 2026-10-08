@@ -57,6 +57,55 @@ local function startScene(name, args)
   step(0.05)
 end
 
+
+-- ---------------------------------------------------------------- conversation helpers
+local function conv() return G.ui.conv end
+
+-- click through lines until choices appear (or the talk ends)
+local function toChoices(max)
+  for _ = 1, max or 200 do
+    local c = conv()
+    if not c or not c:active() then return false end
+    if c.conv:line() then
+      c.shown = 1e9
+      tap("interact")
+    elseif c.conv.choices then
+      return true
+    else
+      step(1 / 60)
+    end
+  end
+  return false
+end
+
+-- pick the choice whose text starts with `prefix`; returns true if found
+local function pick(prefix)
+  if not toChoices() then return false end
+  local c = conv()
+  for i, ch in ipairs(c.conv.choices) do
+    if ch.text:sub(1, #prefix) == prefix then
+      c.sel = i
+      tap("interact")
+      return true
+    end
+  end
+  print("    (no choice '" .. prefix .. "', have: " .. table.concat((function()
+    local t = {} for _, ch in ipairs(c.conv.choices) do t[#t + 1] = ch.text end return t end)(), " | ") .. ")")
+  return false
+end
+
+local function leave()
+  pick("That's all.")
+  toChoices(50)
+  untilIdle(10)
+end
+
+local function talkTo()
+  local sc = G.scenes.current
+  sc:talkVincent()
+  step(1 / 60)
+end
+
 local tests = {}
 
 tests[#tests + 1] = { "util", function()
@@ -203,7 +252,7 @@ tests[#tests + 1] = { "neighborhood: faint event + store ends the chapter", func
   check(Game.flag("reached_store"), "store reached")
   eq(G.state.stage, 3, "chapter complete")
   step(3)
-  eq(G.scenes.current, G.sceneList.ending, "ending scene shown")
+  eq(G.scenes.current, G.sceneList.mart, "store leads into the mart (scene 3)")
 end }
 
 tests[#tests + 1] = { "neighborhood: gate memory + broken lock", function()
@@ -232,7 +281,7 @@ tests[#tests + 1] = { "render smoke: every scene and post-fx strength", function
     R.beginUI(); G.ui.draw(); G.scenes.drawOverlay(); R.endUI()
     R.present()
   end
-  for _, name in ipairs({ "title", "apartment", "neighborhood", "ending" }) do
+  for _, name in ipairs({ "title", "apartment", "neighborhood", "mart", "scene4" }) do
     Game.reset()
     startScene(name, { skipIntro = true })
     local ok, err = pcall(frame)
@@ -250,6 +299,116 @@ tests[#tests + 1] = { "render smoke: every scene and post-fx strength", function
   local ok, err = pcall(frame)
   check(ok, "renders with flashlight: " .. tostring(err))
   check(R.lightCount and R.lightCount > 0, "lights reach the shader")
+end }
+
+tests[#tests + 1] = { "vincent: patience gets the secret; key only on a later ask", function()
+  Game.reset()
+  Game.give("phone", 1, true)
+  Game.setFlag("read_paper")
+  G.state.stage = 3
+  startScene("mart", { skipIntro = true })
+  local sc = G.scenes.current
+  sc:tryStaffDoor()
+  untilIdle()
+  check(Game.flag("tried_staff_door"), "staff door is locked at first")
+  talkTo()
+  check(G.ui.inConversation(), "face-to-face mode opens")
+  local npc = conv().conv.npc
+  check(pick("Why not the hot dogs?"), "greeting choice")
+  check(pick("I want to buy something"), "buy topic offered")
+  check(pick("Bread and a can of soup."), "buy choice")
+  check(Game.flag("bought_food"), "food bought")
+  check(G.state.hunger < 40, "eating lowers hunger")
+  check(pick("You look tired."), "tired topic")
+  check(pick("Not like you"), "kind answer")
+  check(pick("How long have you worked here?"), "how long topic")
+  check(pick("Four years of nights"), "attentive answer")
+  check(pick("Is it always this dead"), "quiet topic")
+  check(pick("Who else comes in"), "asks about regulars")
+  check(pick("You should ask him"), "egg man")
+  check(pick("The missing kid"), "newspaper clue unlocks the kid topic")
+  check(pick("Did you know him?"), "asks about the boy")
+  check(pick("What do you do when your shift"), "after-shift topic")
+  check(pick("That sounds lonely."), "lonely")
+  check(npc.open >= 60, "openness high enough (" .. npc.open .. ")")
+  check(pick("Can I get into the staff room?"), "asks for the key before the secret")
+  check(not Game.has("staff_key"), "no key before the secret")
+  check(pick("Vincent. Are you actually okay?"), "the approach")
+  check(pick("I don't. That's why you can tell me."), "the right words")
+  check(npc.secret, "secret revealed")
+  check(pick("I'd notice."), "after the secret")
+  check(pick("It's on your tag"), "his name")
+  check(Game.flag("vincent_secret") ~= "out", "flag not set until the conversation ends")
+  check(pick("Can I get into the staff room?"), "asks again in the same conversation")
+  check(not Game.has("staff_key"), "still no key inside the same conversation")
+  leave()
+  check(not G.ui.inConversation(), "conversation closed")
+  eq(Game.flag("vincent_secret"), "out", "exited with SECRET=out")
+  check(not Game.has("staff_key"), "no key unless asked")
+  talkTo()
+  check(pick("Can I get into the staff room?"), "asks in a new conversation")
+  check(Game.has("staff_key"), "Vincent hands over the key")
+  leave()
+  sc:tryStaffDoor()
+  step(1)
+  eq(sc.cell, "staff", "key opens the staff room")
+end }
+
+tests[#tests + 1] = { "vincent: pushing too hard shuts him down", function()
+  Game.reset()
+  G.state.stage = 3
+  startScene("mart", { skipIntro = true })
+  local sc = G.scenes.current
+  talkTo()
+  local npc = conv().conv.npc
+  pick("Rough night?")
+  pick("You look tired."); pick("You look like hell")
+  check(npc.open < 20, "rudeness lowers openness (" .. npc.open .. ")")
+  -- the knife makes it worse
+  Game.give("knife", 1, true)
+  pick("Show something...")
+  local c = conv()
+  for i, id in ipairs(G.state.invOrder) do if id == "knife" then c.pickSel = i end end
+  tap("interact")
+  toChoices(50)
+  check(npc.open <= 0 or not G.ui.inConversation(), "showing a knife shuts him down")
+  untilIdle(10)
+  check(not G.ui.inConversation(), "he walks away")
+  talkTo()
+  check(npc.open > 0, "a little thaw when you come back")
+  leave()
+end }
+
+tests[#tests + 1] = { "staff room note sends you to scene 4; lot leads to the woman", function()
+  Game.reset()
+  Game.give("staff_key", 1, true)
+  G.state.stage = 3
+  startScene("mart", { skipIntro = true, cell = "lot", spawn = "from_store" })
+  local sc = G.scenes.current
+  eq(sc.cell, "lot", "starts in the lot")
+  untilIdle(5)
+  check(Game.flag("saw_running_car"), "the running car is noticed")
+  check(sc.beam and sc.beam.spot, "headlight beam is a spot light")
+  sc:talkRed()
+  step(1 / 60)
+  check(G.ui.inConversation(), "talking to the woman is face-to-face")
+  check(pick("Hey. Hey, are you okay?"), "asking if she is okay")
+  check(pick("(Touch her shoulder.)"), "touching her")
+  pick("(Step back.)")
+  toChoices(50)
+  untilIdle(10)
+  check(Game.flag("met_red"), "met_red flag")
+  sc:goCell("staff", "from_store")
+  step(1)
+  eq(sc.cell, "staff", "in the staff room")
+  sc:readNote()
+  step(0.1)
+  untilIdle(5)
+  check(G.ui.modal and G.ui.modal.doc and G.ui.modal.doc.handwritten, "note is shown")
+  step(2.5)
+  tap("interact")
+  step(4)
+  eq(G.scenes.current, G.sceneList.scene4, "teleported to scene 4")
 end }
 
 function T.start(args)

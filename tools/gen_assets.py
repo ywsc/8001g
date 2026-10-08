@@ -26,7 +26,7 @@ def save_set(sub, bg_name, bg, props):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--only', default='apartment,neighborhood,chars,items')
+    ap.add_argument('--only', default='apartment,neighborhood,mart,chars,items')
     args = ap.parse_args()
     only = set(args.only.split(','))
     t0 = time.time()
@@ -39,6 +39,14 @@ def main():
         bg, props = neighborhood.build(os.path.join(ROOT, 'maps', 'neighborhood.txt'))
         save_set('outdoor', 'outdoor_bg', bg, props)
         print('neighborhood done %.1fs' % (time.time() - t0))
+    if 'mart' in only:
+        from pixgen import mart
+        bgs, props = mart.build(os.path.join(ROOT, 'maps'))
+        d = os.path.join(OUT, 'mart')
+        for name, spr in bgs.items():
+            spr.save(d, name)
+        save_set('mart', None, None, props)
+        print('mart done %.1fs' % (time.time() - t0))
     if 'chars' in only:
         from pixgen import characters
         save_set('chars', None, None, characters.build())

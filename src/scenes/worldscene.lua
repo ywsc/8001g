@@ -150,6 +150,10 @@ function WS:drawOverlayLowRes()
 end
 
 function WS:draw()
+  if G.ui.inConversation() then
+    G.ui.conv:drawFace()
+    return
+  end
   local cx, cy = self.camera:drawPos()
   R.beginWorld(cx, cy)
   self.world:draw(cx, cy)

@@ -198,7 +198,7 @@ end
 local function drawObjective(a)
   local Game = require("src.game.game")
   local st = G.state
-  if not st or st.stage > 2 then return end
+  if not st or st.stage > 3 then return end
   local list = Game.objectives()
   local title = Game.STAGES[st.stage].title
   local w = 330
@@ -279,7 +279,18 @@ end
 UI.modal = nil
 
 function UI.blocking()
-  return D.active or UI.modal ~= nil
+  return D.active or UI.modal ~= nil or (UI.conv ~= nil and UI.conv:active())
+end
+
+-- face-to-face conversation (interrogation mode)
+function UI.openConversation(script, opts)
+  UI.prompt = nil
+  UI.conv = require("src.ui.conversation").open(script, opts)
+  return UI.conv
+end
+
+function UI.inConversation()
+  return UI.conv ~= nil and UI.conv:active()
 end
 
 function UI.close()
@@ -472,6 +483,13 @@ end
 
 function Doc:update(dt)
   self.t = self.t + dt
+  if self.doc.handwritten then
+    if self.t > 2.2 and (Input.pressed("interact") or Input.pressed("cancel")) then
+      Input.consume("interact"); Input.consume("cancel"); Input.consume("pause")
+      UI.close()
+    end
+    return
+  end
   local n = #self.doc.pages
   local before = self.page
   if Input.pressed("left") then self.page = math.max(1, self.page - 1) end
@@ -487,7 +505,40 @@ function Doc:update(dt)
   end
 end
 
+function Doc:drawHandwritten()
+  love.graphics.setColor(0, 0, 0, 0.82)
+  love.graphics.rectangle("fill", 0, 0, 960, 540)
+  local pg = self.doc.pages[self.page]
+  love.graphics.push()
+  love.graphics.translate(480, 250)
+  love.graphics.rotate(-0.04)
+  love.graphics.setColor(0, 0, 0, 0.5)
+  love.graphics.rectangle("fill", -176, -116, 360, 240)
+  T.setColor(T.col.paper)
+  love.graphics.rectangle("fill", -180, -120, 360, 240)
+  love.graphics.setColor(0.35, 0.33, 0.28, 0.6)
+  for i = 0, 6 do love.graphics.rectangle("fill", -160, -80 + i * 30, 320, 1) end
+  love.graphics.setColor(0.6, 0.55, 0.4, 1)
+  love.graphics.rectangle("fill", -150, -126, 46, 14)
+  love.graphics.rectangle("fill", 104, -126, 46, 14)
+  -- the words appear a letter at a time, pressed hard into the paper
+  local shown = math.floor(self.t * 6)
+  local text = pg.head:sub(1, shown)
+  love.graphics.setFont(T.fHuge)
+  local w = T.fHuge:getWidth(pg.head)
+  love.graphics.setColor(0.08, 0.06, 0.06, 1)
+  love.graphics.print(text, -w / 2 + 2, -34 + 2)
+  love.graphics.setColor(0.12, 0.1, 0.12, 1)
+  love.graphics.print(text, -w / 2, -34)
+  love.graphics.pop()
+  if shown >= #pg.head + 4 then
+    T.hints({ { "interact", "..." } }, 430, 400)
+  end
+  love.graphics.setColor(1, 1, 1, 1)
+end
+
 function Doc:draw()
+  if self.doc.handwritten then return self:drawHandwritten() end
   love.graphics.setColor(0, 0, 0, 0.7)
   love.graphics.rectangle("fill", 0, 0, 960, 540)
   local pg = self.doc.pages[self.page]
@@ -591,6 +642,7 @@ function UI.reset()
   banner = nil
   UI.modal = nil
   UI.prompt = nil
+  UI.conv = nil
 end
 
 function UI.update(dt)
@@ -603,8 +655,11 @@ function UI.update(dt)
     if banner.t > 3 then banner = nil end
   end
   UI.flashObjective = math.max(0, UI.flashObjective - dt)
+  if UI.conv and not UI.conv:active() then UI.conv = nil end
   if D.active then
     updateDialogue(dt)
+  elseif UI.conv then
+    UI.conv:update(dt)
   elseif UI.modal then
     UI.modal:update(dt)
   end
@@ -613,6 +668,11 @@ function UI.update(dt)
 end
 
 function UI.draw()
+  if UI.conv then
+    UI.conv:drawUI()
+    if D.active then drawDialogue() end
+    return
+  end
   local a = UI.hudAlpha
   if a > 0.01 then
     local dim = (D.active or UI.modal) and 0.5 or 1

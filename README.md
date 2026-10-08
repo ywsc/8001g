@@ -5,14 +5,17 @@ It's 2 AM on Alder Street. You wake up starving in a filthy apartment and need
 to get to the 24-hour store. This is not an action game: you explore, pick
 things up, read, and remember. Combat comes later in the game.
 
-This repository contains **Part I — Empty**: two scenes, playable from the
-title screen to the chapter ending.
+It has two phases. In **exploration** you walk around and collect clues. In
+**face-to-face** conversations you dig out each person's secret, and secrets
+unlock the story. Three scenes are playable from the title screen to the
+"wake up" note that leads into Scene 4, which is not written yet.
 
 ## Running
 
 ```bash
 love .                      # play
-love . --scene apartment    # jump to a scene (apartment | neighborhood), add --skip-intro
+love . --scene apartment    # jump to a scene (apartment | neighborhood | mart), add --skip-intro
+love . --scene mart --skip-intro --stage 3 --cell lot   # a specific mart cell
 tools/run_tests.sh          # headless logic tests
 tools/run_tests.sh --bot    # + scripted full playthrough, screenshots in tests/out/
 ```
@@ -48,8 +51,17 @@ the bed.
 * **West:** more apartment blocks.
 
 At the crossroads, hunger hits you hard and you nearly faint (blur, desaturation,
-heartbeat, tinnitus). After that you hurry to the store, and reaching it ends
-Part I.
+heartbeat, tinnitus). After that you hurry to the store, and reaching it takes
+you inside, into Scene 3.
+
+**Scene 3: the 24/7 MART.** The shop floor, a locked staff room and the parking
+lot are separate cells. Talk to **Vincent**, the night clerk, face to face.
+Patience and attention get his secret out, and in a later conversation he'll
+give you the staff room key if you ask. In the lot, a car idles with its
+headlights on, and the beam leads to a red-haired woman lying face down.
+Reading the note in the staff room ("wake up") sends you to Scene 4. See
+`docs/DESIGN.md` §4 for how the interrogation system works and how to write
+new NPC conversations.
 
 ## Tech overview
 
@@ -89,7 +101,10 @@ python3 tools/gen_assets.py   # -> assets/gfx  (needs numpy, scipy, pillow)
 python3 tools/gen_audio.py    # -> assets/sfx  (needs numpy, scipy, ffmpeg)
 ```
 
-It builds every sprite as albedo, normal, height and emissive maps. It uses
+The face-to-face scenes use AI-painted images instead (`python3 tools/ai_art.py`,
+pollinations.ai, cached in `assets/ai_src/`, pixelated to the game's resolution).
+
+The generator builds every sprite as albedo, normal, height and emissive maps. It uses
 hue-shifted material ramps with ordered dithering and 3/4 box modelling, so the
 engine can relight everything at runtime. Any albedo PNG can later be swapped for
 an externally generated image while keeping the same file name.

@@ -342,12 +342,10 @@ function N:reachStore()
     if not Game.flag("faint_done") then
       Game.sayWait({ "Made it. My stomach is screaming." })
     end
-    Game.sayWait({ "The doors shudder open. Fluorescent hum. Warm air that smells like old coffee and bleach.",
-      "Bread. Instant noodles. A hot dog that's been turning since yesterday. I could cry.",
-      "There's nobody behind the counter.", "...Hello?" })
+    Game.sayWait({ "The doors shudder open. Fluorescent hum. Warm air that smells like old coffee and bleach." })
     Game.setFlag("reached_store")
     G.audio.fadeOutAll()
-    G.scenes.switch(G.sceneList.ending, {}, { speed = 0.5 })
+    G.scenes.switch(G.sceneList.mart, {}, { speed = 0.8 })
   end)
 end
 

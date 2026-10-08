@@ -180,14 +180,92 @@ local function plan()
   sec(1.0); shot("store_door")
   mash(60)
   sec(4)
-  if scene() ~= G.sceneList.ending then fail("ending not reached") end
-  sec(6); shot("ending")
+  if scene() ~= G.sceneList.mart then fail("mart not reached") return end
   if not Game.flag("reached_store") then fail("reached_store flag missing") end
-  if G.state.stage ~= 3 then fail("stage is " .. G.state.stage) end
   for _, id in ipairs({ "phone", "key", "coin", "backpack", "water", "coke", "meat", "knife", "lock" }) do
     if not Game.has(id) then fail("missing item " .. id) end
   end
-  sec(4)
+
+  -- ===== scene 3: the mart =====
+  sec(2.6); shot("mart_card")
+  mash(30)
+  shot("mart_store")
+  goto(454, 70); face("up"); use("Staff room"); mash(10)
+  route({ { 440, 140 }, { 400, 254 } }); face("up")
+  use("Talk to the clerk"); sec(1.2)
+  shot("vincent_greeting")
+  local function conv() return G.ui.conv end
+  local function toChoices()
+    for _ = 1, 600 do
+      local c = conv()
+      if not c or not c:active() then return false end
+      if c.conv:line() then
+        if c.shown >= #c.conv:line().text then tap("interact") else y() end
+      elseif c.conv.choices then return true
+      else y() end
+    end
+    return false
+  end
+  local function say(prefix, snap)
+    if not toChoices() then fail("no choices for '" .. prefix .. "'") return end
+    local c = conv()
+    for i, ch in ipairs(c.conv.choices) do
+      if ch.text:sub(1, #prefix) == prefix then
+        c.sel = i
+        if snap then sec(0.3); shot(snap) end
+        tap("interact")
+        return
+      end
+    end
+    fail("choice not offered: " .. prefix)
+  end
+  say("Why not the hot dogs?")
+  say("I want to buy something", "vincent_topics")
+  say("Bread and a can of soup.")
+  say("You look tired."); say("Not like you")
+  say("How long have you worked here?"); say("Four years of nights")
+  say("Is it always this dead"); say("Who else comes in"); say("You should ask him")
+  say("The missing kid"); say("Did you know him?")
+  say("What do you do when your shift"); say("That sounds lonely.")
+  say("Vincent. Are you actually okay?"); say("I don't. That's why you can tell me.")
+  sec(1.5); y()
+  for _ = 1, 3 do tap("interact"); sec(0.3) end
+  sec(1.5); shot("vincent_secret")
+  say("I'd notice."); say("It's on your tag")
+  say("That's all."); mash(10)
+  if Game.flag("vincent_secret") ~= "out" then fail("secret flag not out") end
+  use("Talk to the clerk"); sec(0.5)
+  say("Can I get into the staff room?")
+  say("That's all."); mash(10)
+  if not Game.has("staff_key") then fail("no staff key") end
+
+  -- the lot and the woman in the headlights
+  route({ { 400, 270 } }); face("down"); use("Go outside"); sec(1.2)
+  mash(10)
+  shot("lot")
+  route({ { 330, 250 }, { 330, 300 }, { 352, 300 } })
+  shot("headlights")
+  face("right"); use("The woman"); sec(1.5)
+  shot("red_face")
+  say("Hey. Hey, are you okay?"); say("(Touch her shoulder.)")
+  sec(0.5); shot("red_touch")
+  say("(Step back.)"); mash(10)
+
+  -- the staff room and the note
+  route({ { 330, 250 }, { 400, 116 } }); face("up"); use("Back inside"); sec(1.2)
+  goto(454, 70); face("up"); use("Staff room"); sec(1.2)
+  shot("staff_room")
+  route({ { 128, 120 }, { 100, 74 } }); face("up"); use("Laptop")
+  goto(40, 66); face("up"); use("Laptop"); sec(0.4)
+  shot("laptop")
+  tap("cancel"); y()
+  route({ { 100, 74 } }); face("up"); use("Note on the wall")
+  mash(5); sec(2.6)
+  shot("note")
+  tap("interact"); sec(5)
+  if scene() ~= G.sceneList.scene4 then fail("scene 4 not reached") end
+  sec(4); shot("scene4")
+  sec(3)
   tap("interact"); sec(2.5)
   if scene() ~= G.sceneList.title then fail("did not return to the title") end
 end

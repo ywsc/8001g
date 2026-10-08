@@ -3,7 +3,7 @@ local G = require("src.g")
 
 local Items = {}
 
-Items.order = { "phone", "key", "coin", "knife", "water", "coke", "meat", "backpack", "lock" }
+Items.order = { "phone", "key", "coin", "knife", "water", "coke", "meat", "backpack", "lock", "staff_key" }
 
 Items.defs = {
   coin = {
@@ -86,6 +86,11 @@ Items.defs = {
       game.toggleFlashlight()
       return false
     end,
+  },
+  staff_key = {
+    name = "Staff Room Key",
+    icon = "key",
+    desc = "Vincent's key. A rubber band around it, and a little plastic tag that says DON'T.",
   },
   lock = {
     name = "Broken Padlock",

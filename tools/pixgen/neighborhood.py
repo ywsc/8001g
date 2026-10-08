@@ -17,7 +17,7 @@ def load_grid(path):
 # ===========================================================================
 # ground
 # ===========================================================================
-def build_ground(grid):
+def build_ground(grid, markings=True):
     H, W = len(grid), len(grid[0])
     g = np.array([list(r) for r in grid])
     s = Sprite(W * T, H * T)
@@ -56,26 +56,27 @@ def build_ground(grid):
     oil = (fbm(w, h, 9, 6, 3) > 0.72) & road
     s.tint(oil, hexc('#06070a'), 0.45)
 
-    # --- lane markings --------------------------------------------------------
-    # horizontal road y 480..560 (center 520), vertical road x 608..688 (center 648)
-    inter = (xx >= 576) & (xx < 720) & (yy >= 448) & (yy < 592)
-    dash_h = (yy >= 519) & (yy <= 520) & ((xx % 24) < 13) & ~inter & (tile == 'r')
-    dash_v = (xx >= 647) & (xx <= 648) & ((yy % 24) < 13) & ~inter & (tile == 'r')
     wear = fbm(w, h, 6, 7, 3)
-    paint_mask = (dash_h | dash_v) & (wear > 0.32)
-    s.paint(paint_mask, ramp=P.YELLOW_PAINT, value=0.3 + wear * 0.6, normal=UP, height=0)
-    # stop lines + zebra crosswalks on each arm of the intersection
-    zebra = np.zeros((h, w), bool)
-    zebra |= (xx >= 608) & (xx < 688) & (yy >= 452) & (yy < 476) & (((xx - 608) % 10) < 5)   # north arm
-    zebra |= (xx >= 608) & (xx < 688) & (yy >= 564) & (yy < 588) & (((xx - 608) % 10) < 5)   # south arm
-    zebra |= (yy >= 480) & (yy < 560) & (xx >= 580) & (xx < 604) & (((yy - 480) % 10) < 5)   # west arm
-    zebra |= (yy >= 480) & (yy < 560) & (xx >= 692) & (xx < 716) & (((yy - 480) % 10) < 5)   # east arm
-    zebra &= road & (wear > 0.28)
-    s.paint(zebra, ramp=P.LINE_PAINT, value=0.25 + wear * 0.55, normal=UP, height=0)
-    # parking stalls
-    stall = (tile == 'p') & (((xx - 384) % 40) == 0) & ((yy % 192) > 40) & ((yy % 192) < 120) & (yy > 780)
-    stall |= (tile == 'p') & (yy == 796) & (xx % 40 < 41)
-    s.paint(stall & (wear > 0.3), ramp=P.LINE_PAINT, value=0.45, normal=UP, height=0)
+    if markings:
+        # --- lane markings --------------------------------------------------------
+        # horizontal road y 480..560 (center 520), vertical road x 608..688 (center 648)
+        inter = (xx >= 576) & (xx < 720) & (yy >= 448) & (yy < 592)
+        dash_h = (yy >= 519) & (yy <= 520) & ((xx % 24) < 13) & ~inter & (tile == 'r')
+        dash_v = (xx >= 647) & (xx <= 648) & ((yy % 24) < 13) & ~inter & (tile == 'r')
+        paint_mask = (dash_h | dash_v) & (wear > 0.32)
+        s.paint(paint_mask, ramp=P.YELLOW_PAINT, value=0.3 + wear * 0.6, normal=UP, height=0)
+        # stop lines + zebra crosswalks on each arm of the intersection
+        zebra = np.zeros((h, w), bool)
+        zebra |= (xx >= 608) & (xx < 688) & (yy >= 452) & (yy < 476) & (((xx - 608) % 10) < 5)   # north arm
+        zebra |= (xx >= 608) & (xx < 688) & (yy >= 564) & (yy < 588) & (((xx - 608) % 10) < 5)   # south arm
+        zebra |= (yy >= 480) & (yy < 560) & (xx >= 580) & (xx < 604) & (((yy - 480) % 10) < 5)   # west arm
+        zebra |= (yy >= 480) & (yy < 560) & (xx >= 692) & (xx < 716) & (((yy - 480) % 10) < 5)   # east arm
+        zebra &= road & (wear > 0.28)
+        s.paint(zebra, ramp=P.LINE_PAINT, value=0.25 + wear * 0.55, normal=UP, height=0)
+        # parking stalls
+        stall = (tile == 'p') & (((xx - 384) % 40) == 0) & ((yy % 192) > 40) & ((yy % 192) < 120) & (yy > 780)
+        stall |= (tile == 'p') & (yy == 796) & (xx % 40 < 41)
+        s.paint(stall & (wear > 0.3), ramp=P.LINE_PAINT, value=0.45, normal=UP, height=0)
 
     # --- sidewalks -----------------------------------------------------------
     side = tile == 's'
@@ -132,14 +133,15 @@ def build_ground(grid):
     s.ao_floor(hedge, radius=8, strength=0.5)
 
     # --- manholes, drains, puddles, litter ----------------------------------
-    for cx, cy in ((560, 506), (760, 534), (648, 300), (648, 700), (1010, 520), (220, 500)):
-        m = s.ellipse_mask(cx, cy, 7, 5)
-        s.paint(m, ramp=P.IRON, value=0.45 + ((s.xx + s.yy) % 3 == 0) * 0.25, normal=UP, height=0)
-        s.paint(m & ~s.ellipse_mask(cx, cy, 6, 4), ramp=P.IRON, value=0.1)
-    for dx in range(40, 1280, 160):
-        for dy in (482, 554):
-            s.paint(s.rect_mask(dx, dy, 10, 3), ramp=P.IRON, value=0.2, normal=UP)
-            s.paint(s.rect_mask(dx + 1, dy + 1, 8, 1) & ((s.xx % 2) == 0), color=hexc('#020203'))
+    if markings:
+        for cx, cy in ((560, 506), (760, 534), (648, 300), (648, 700), (1010, 520), (220, 500)):
+            m = s.ellipse_mask(cx, cy, 7, 5)
+            s.paint(m, ramp=P.IRON, value=0.45 + ((s.xx + s.yy) % 3 == 0) * 0.25, normal=UP, height=0)
+            s.paint(m & ~s.ellipse_mask(cx, cy, 6, 4), ramp=P.IRON, value=0.1)
+        for dx in range(40, 1280, 160):
+            for dy in (482, 554):
+                s.paint(s.rect_mask(dx, dy, 10, 3), ramp=P.IRON, value=0.2, normal=UP)
+                s.paint(s.rect_mask(dx + 1, dy + 1, 8, 1) & ((s.xx % 2) == 0), color=hexc('#020203'))
     rp = rng(21)
     for _ in range(26):
         x, y = rp.integers(0, w), rp.integers(144, h)
@@ -160,11 +162,12 @@ def build_ground(grid):
             else:
                 s.paint(s.rect_mask(x, y, 3, 1), ramp=P.METAL, value=0.5, height=1)
 
-    # --- schoolyard hopscotch -------------------------------------------------
-    hx, hy = 520, 96
-    for i, (ox, oy) in enumerate([(0, 0), (0, -8), (-5, -16), (5, -16), (0, -24), (-5, -32), (5, -32)]):
-        m = s.rect_mask(hx + ox, hy + oy, 8, 7) & ~s.rect_mask(hx + ox + 1, hy + oy + 1, 6, 5)
-        s.paint(m & (wear > 0.35), ramp=P.LINE_PAINT, value=0.35, height=0)
+    if markings:
+        # --- schoolyard hopscotch -------------------------------------------------
+        hx, hy = 520, 96
+        for i, (ox, oy) in enumerate([(0, 0), (0, -8), (-5, -16), (5, -16), (0, -24), (-5, -32), (5, -32)]):
+            m = s.rect_mask(hx + ox, hy + oy, 8, 7) & ~s.rect_mask(hx + ox + 1, hy + oy + 1, 6, 5)
+            s.paint(m & (wear > 0.35), ramp=P.LINE_PAINT, value=0.35, height=0)
     return s
 
 
@@ -175,7 +178,8 @@ FONT = {
     'R': ["110", "101", "110", "101", "101"], 'T': ["111", "010", "010", "010", "010"],
     'U': ["101", "101", "101", "101", "111"], 'O': ["111", "101", "101", "101", "111"],
     'S': ["111", "100", "111", "001", "111"], 'L': ["100", "100", "100", "100", "111"],
-    'E': ["111", "100", "110", "100", "111"], ' ': ["0", "0", "0", "0", "0"],
+    'E': ["111", "100", "110", "100", "111"], 'F': ["111", "100", "110", "100", "100"],
+    ' ': ["0", "0", "0", "0", "0"],
 }
 
 

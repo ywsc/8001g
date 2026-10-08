@@ -159,7 +159,8 @@ def mat_baseboard(s, mask, seed=7):
 # ---------------------------------------------------------------------------
 # background
 # ---------------------------------------------------------------------------
-def build_background(grid):
+def build_background(grid, floor_fns=None, face_fns=None):
+    """floor_fns / face_fns: {char: fn(sprite, mask[, top])} for extra room types."""
     H, W = len(grid), len(grid[0])
     g = np.array([list(r) for r in grid])
     wall = g == '#'
@@ -226,6 +227,11 @@ def build_background(grid):
     s.n[bs] = np.array(SOUTH) / np.linalg.norm(SOUTH)
     s.tint(bs, hexc('#5a4a20'), 0.3)
 
+    for c, fn in (floor_fns or {}).items():
+        fn(s, floor & (tile == c))
+    for c, fn in (face_fns or {}).items():
+        fn(s, face & (froom == c), top)
+
     # baseboards on wallpapered faces
     bb = face & ((froom == 'b') | (froom == 'l')) & (rel >= 29)
     mat_baseboard(s, bb)
@@ -249,7 +255,8 @@ def build_background(grid):
     s.shade(below, 0.6)
 
     # front door (south wall, cells marked D)
-    paint_front_door(s, door)
+    if door.any():
+        paint_front_door(s, door)
     return s
 
 

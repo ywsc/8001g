@@ -56,7 +56,8 @@ function love.load(arglist)
     title = require("src.scenes.title")(),
     apartment = require("src.scenes.apartment")(),
     neighborhood = require("src.scenes.neighborhood")(),
-    ending = require("src.scenes.ending")(),
+    mart = require("src.scenes.mart")(),
+    scene4 = require("src.scenes.scene4")(),
   }
 
   if args.test then
@@ -72,7 +73,8 @@ function love.load(arglist)
     Game.reset()
     if args.stage then G.state.stage = tonumber(args.stage) end
   end
-  SM.switch(G.sceneList[start], { skipIntro = args["skip-intro"] })
+  SM.switch(G.sceneList[start], { skipIntro = args["skip-intro"], cell = args.cell,
+    spawn = args.cell and (args.cell == "store" and "from_street" or "from_store") or nil })
   R.debugView = args.view
   R.debugPrint = args.lightdump
   R.onlyLight = tonumber(args.onlylight)
