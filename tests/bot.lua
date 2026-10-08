@@ -190,8 +190,8 @@ local function plan()
   sec(2.6); shot("mart_card")
   mash(30)
   shot("mart_store")
-  goto(454, 70); face("up"); use("Staff room"); mash(10)
-  route({ { 440, 140 }, { 400, 254 } }); face("up")
+  route({ { 300, 262 }, { 300, 100 }, { 454, 100 }, { 454, 70 } }); face("up"); use("Staff room"); mash(10)
+  route({ { 454, 100 }, { 300, 100 }, { 300, 262 }, { 400, 254 } }); face("up")
   use("Talk to the clerk"); sec(1.2)
   shot("vincent_greeting")
   local function conv() return G.ui.conv end
@@ -240,7 +240,7 @@ local function plan()
   if not Game.has("staff_key") then fail("no staff key") end
 
   -- the lot and the woman in the headlights
-  route({ { 400, 270 } }); face("down"); use("Go outside"); sec(1.2)
+  route({ { 400, 272 } }); face("down"); use("Go outside"); sec(1.2)
   mash(10)
   shot("lot")
   route({ { 330, 250 }, { 330, 300 }, { 352, 300 } })
@@ -253,7 +253,7 @@ local function plan()
 
   -- the staff room and the note
   route({ { 330, 250 }, { 400, 116 } }); face("up"); use("Back inside"); sec(1.2)
-  goto(454, 70); face("up"); use("Staff room"); sec(1.2)
+  route({ { 300, 262 }, { 300, 100 }, { 454, 100 }, { 454, 70 } }); face("up"); use("Staff room"); sec(1.2)
   shot("staff_room")
   route({ { 128, 120 }, { 100, 74 } }); face("up"); use("Laptop")
   goto(40, 66); face("up"); use("Laptop"); sec(0.4)

@@ -89,8 +89,8 @@ function love.update(dt)
   dt = math.min(dt, 1 / 20)
   if args.fixeddt then dt = 1 / 60 end
   frame = frame + 1
+  if G.hook then G.hook(dt) end   -- the test bot presses keys before input is sampled
   Input.update()
-  if G.hook then G.hook(dt) end
   if Input.pressed("fullscreen") then G.toggleFullscreen() end
   if Input.pressed("debug") then debugOverlay = not debugOverlay end
   SM.update(dt)
