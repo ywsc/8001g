@@ -168,6 +168,37 @@ def build_ground(grid):
     return s
 
 
+FONT = {
+    '2': ["111", "001", "111", "100", "111"], '4': ["101", "101", "111", "001", "001"],
+    '/': ["001", "001", "010", "100", "100"], '7': ["111", "001", "001", "010", "010"],
+    'M': ["10001", "11011", "10101", "10001", "10001"], 'A': ["010", "101", "111", "101", "101"],
+    'R': ["110", "101", "110", "101", "101"], 'T': ["111", "010", "010", "010", "010"],
+    'U': ["101", "101", "101", "101", "111"], 'O': ["111", "101", "101", "101", "111"],
+    'S': ["111", "100", "111", "001", "111"], 'L': ["100", "100", "100", "100", "111"],
+    'E': ["111", "100", "110", "100", "111"], ' ': ["0", "0", "0", "0", "0"],
+}
+
+
+def text_masks(s, text, x, y, scale=1):
+    """One mask per character of `text`, drawn with the 3x5 pixel font."""
+    masks = []
+    cx = x
+    for ch in text:
+        glyph = FONT[ch]
+        m = np.zeros((s.h, s.w), bool)
+        for gy, rowbits in enumerate(glyph):
+            for gx, b in enumerate(rowbits):
+                if b == '1':
+                    m |= s.rect_mask(cx + gx * scale, y + gy * scale, scale, scale)
+        masks.append(m)
+        cx += (len(glyph[0]) + 1) * scale
+    return masks
+
+
+def text_width(text, scale=1):
+    return sum((len(FONT[c][0]) + 1) * scale for c in text) - scale
+
+
 # ===========================================================================
 # building parts
 # ===========================================================================
@@ -373,27 +404,9 @@ def store():
     # sign band
     band = s.rect_mask(0, D, W, 14)
     s.paint(band, ramp=Ramp.from_base('#2a1414', 4), value=0.4, normal=SOUTH)
-    # neon letters "24/7 MART" from a tiny 3x5 font
-    font = {
-        '2': ["111", "001", "111", "100", "111"], '4': ["101", "101", "111", "001", "001"],
-        '/': ["001", "001", "010", "100", "100"], '7': ["111", "001", "010", "010", "010"],
-        'M': ["10001", "11011", "10101", "10001", "10001"], 'A': ["010", "101", "111", "101", "101"],
-        'R': ["110", "101", "110", "101", "101"], 'T': ["111", "010", "010", "010", "010"], ' ': ["0", "0", "0", "0", "0"],
-    }
+    # neon letters
     text = "24/7 MART"
-    scale = 2
-    tw = sum((len(font[c][0]) + 1) * scale for c in text)
-    cx = (W - tw) // 2
-    letters = []
-    for ch in text:
-        glyph = font[ch]
-        m = np.zeros((s.h, s.w), bool)
-        for gy, rowbits in enumerate(glyph):
-            for gx, b in enumerate(rowbits):
-                if b == '1':
-                    m |= s.rect_mask(cx + gx * scale, D + 2 + gy * scale, scale, scale)
-        letters.append(m)
-        cx += (len(glyph[0]) + 1) * scale
+    letters = text_masks(s, text, (W - text_width(text, 2)) // 2, D + 2, 2)
     for i, m in enumerate(letters):
         col = hexc('#ff4a3a') if i < 4 else hexc('#f0f0e0')
         s.paint(m, color=col * 0.8)
@@ -754,23 +767,15 @@ def deal_sign():
     board = s.rect_mask(0, 0, 48, 30)
     s.paint(board, ramp=Ramp.from_base('#1a2a4a', 5), value=0.4, normal=SOUTH)
     s.paint(board & ~s.rect_mask(2, 2, 44, 26), ramp=P.METAL, value=0.5)
-    # "AUTO" letters lit, "SALES" dead
-    def bar(x, y, w, h, on):
-        m = s.rect_mask(x, y, w, h)
-        c = hexc('#60c0ff') if on else hexc('#202a34')
-        s.paint(m, color=c * 0.7)
-        if on:
-            s.em[m] = c
-    # crude block letters
-    for i, x in enumerate((5, 15, 25, 35)):
-        bar(x, 5, 7, 1, True)
-        bar(x, 5, 1, 9, True)
-        bar(x + 6, 5, 1, 9, i != 2)
-        bar(x, 13, 7, 1, i in (1, 3))
-    for i, x in enumerate((4, 12, 20, 28, 36)):
-        bar(x, 18, 6, 1, False)
-        bar(x, 18, 1, 8, False)
-        bar(x, 25, 6, 1, False)
+    # AUTO lit (the T has died), SALES dead
+    on, off = hexc('#60c0ff'), hexc('#1c2630')
+    for i, m in enumerate(text_masks(s, "AUTO", (48 - text_width("AUTO", 2)) // 2, 4, 2)):
+        lit = i != 2
+        s.paint(m, color=(on if lit else off) * 0.7)
+        if lit:
+            s.em[m] = on
+    for m in text_masks(s, "SALES", (48 - text_width("SALES", 1)) // 2, 19, 1):
+        s.paint(m, color=off)
     s.billboard_height(None, bottom=95)
     return s
 
