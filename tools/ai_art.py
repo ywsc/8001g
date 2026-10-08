@@ -56,7 +56,7 @@ HORDE = {
         prompt=('pixel art, dark horror adventure game, 1boy, solo, young man, 28 years old, bald, shaved head, grey eyes, '
                 'light stubble, sad, looking down, arms crossed, dark green polo shirt, name tag, behind convenience store '
                 'counter, upper body, night, fluorescent ceiling light, shelves in background, ' + PIXEL_STYLE),
-        seed=11, gamma=1.45, sat=0.7),
+        seed=11, gamma=1.9, sat=0.45),
     'red': dict(
         prompt=('pixel art, dark horror adventure game, 1girl, solo, lying on stomach, face down, face not visible, long red '
                 'hair spread on the ground, dark coat, arm outstretched, wet asphalt, empty parking lot, night, car headlights '
